@@ -10,6 +10,10 @@ export function BlockContact(arg1) {
   return window['go']['main']['App']['BlockContact'](arg1);
 }
 
+export function ClearHistory(arg1) {
+  return window['go']['main']['App']['ClearHistory'](arg1);
+}
+
 export function DeleteContact(arg1) {
   return window['go']['main']['App']['DeleteContact'](arg1);
 }

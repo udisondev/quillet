@@ -45,4 +45,5 @@ export const layout = {
   searchBarHeight: 48,
   chatListItemHeight: 72,
   fabSize: 48,
+  chatHeaderHeight: 64,
 } as const;

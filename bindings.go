@@ -65,6 +65,11 @@ func (a *App) MarkAsRead(contactID string) error {
 	return a.messenger.MarkAsRead(a.ctx, contactID)
 }
 
+// ClearHistory removes all messages in a chat.
+func (a *App) ClearHistory(contactID string) error {
+	return a.messenger.ClearHistory(a.ctx, contactID)
+}
+
 // --- Settings ---
 
 // GetSettings returns the current application settings.

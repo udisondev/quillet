@@ -6,6 +6,8 @@ export function AddContact(arg1:string,arg2:string):Promise<domain.Contact>;
 
 export function BlockContact(arg1:string):Promise<void>;
 
+export function ClearHistory(arg1:string):Promise<void>;
+
 export function DeleteContact(arg1:string):Promise<void>;
 
 export function GetChatSummaries():Promise<Array<domain.ChatSummary>>;

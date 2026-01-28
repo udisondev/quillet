@@ -320,6 +320,18 @@ func (s *StubMessenger) GetMessages(_ context.Context, contactID string, limit i
 	return result, nil
 }
 
+func (s *StubMessenger) ClearHistory(_ context.Context, contactID string) error {
+	simulateDelay(20, 50)
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if _, exists := s.contacts[contactID]; !exists {
+		return fmt.Errorf("clear history: contact %s not found", contactID)
+	}
+	delete(s.messages, contactID)
+	return nil
+}
+
 func (s *StubMessenger) MarkAsRead(_ context.Context, contactID string) error {
 	simulateDelay(10, 30)
 	s.mu.Lock()

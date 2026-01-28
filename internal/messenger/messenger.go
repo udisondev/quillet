@@ -27,6 +27,7 @@ type ChatService interface {
 	SendMessage(ctx context.Context, contactID, content string) (*domain.Message, error)
 	GetMessages(ctx context.Context, contactID string, limit int, beforeID string) ([]domain.Message, error)
 	MarkAsRead(ctx context.Context, contactID string) error
+	ClearHistory(ctx context.Context, contactID string) error
 }
 
 // SettingsManager handles user-configurable preferences.

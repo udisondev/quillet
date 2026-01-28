@@ -3,12 +3,14 @@ import {
   onMessageReceived,
   onMessageStatus,
   onContactStatus,
+  onContactTyping,
   onConnectionState,
   onSettingsChanged,
 } from "../services/events";
 import type {
   MessageStatusPayload,
   ContactStatusPayload,
+  ContactTypingPayload,
 } from "../services/events";
 import { useMessagesStore } from "../store/useMessagesStore";
 import { useChatSummariesStore } from "../store/useChatSummariesStore";
@@ -20,6 +22,7 @@ import type { Message, Settings, ConnectionState } from "../types";
 export function useEventSubscriptions() {
   const addMessage = useMessagesStore((s) => s.addMessage);
   const updateMessageStatus = useMessagesStore((s) => s.updateMessageStatus);
+  const setTyping = useMessagesStore((s) => s.setTyping);
   const updateSummary = useChatSummariesStore((s) => s.updateSummary);
   const updateUnreadCount = useChatSummariesStore((s) => s.updateUnreadCount);
   const updateContactStatus = useContactsStore((s) => s.updateContactStatus);
@@ -47,6 +50,10 @@ export function useEventSubscriptions() {
         updateContactStatus(payload.contactID, payload.isOnline);
       }),
 
+      onContactTyping((payload: ContactTypingPayload) => {
+        setTyping(payload.contactID, payload.isTyping);
+      }),
+
       onConnectionState((state: ConnectionState) => {
         setConnectionState(state);
       }),
@@ -64,6 +71,7 @@ export function useEventSubscriptions() {
   }, [
     addMessage,
     updateMessageStatus,
+    setTyping,
     updateSummary,
     updateUnreadCount,
     updateContactStatus,

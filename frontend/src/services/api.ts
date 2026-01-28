@@ -10,6 +10,7 @@ import {
   SendMessage,
   GetMessages,
   MarkAsRead,
+  ClearHistory,
   GetSettings,
   UpdateSettings,
 } from "@wailsjs/go/main/App";
@@ -78,6 +79,10 @@ export function getMessages(
 
 export function markAsRead(contactID: string): Promise<void> {
   return MarkAsRead(contactID);
+}
+
+export function clearHistory(contactID: string): Promise<void> {
+  return ClearHistory(contactID);
 }
 
 // Settings

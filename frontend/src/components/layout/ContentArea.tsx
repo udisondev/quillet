@@ -1,5 +1,6 @@
 import Box from "@mui/material/Box";
 import { EmptyState } from "../ui/EmptyState";
+import { ChatView } from "../chat/ChatView";
 import { useUIStore } from "../../store/useUIStore";
 
 export function ContentArea() {
@@ -15,8 +16,11 @@ export function ContentArea() {
         bgcolor: "background.default",
       }}
     >
-      {!activeChatID && <EmptyState variant="no-chat-selected" />}
-      {/* ChatView will be added in stage 5 */}
+      {activeChatID ? (
+        <ChatView key={activeChatID} chatID={activeChatID} />
+      ) : (
+        <EmptyState variant="no-chat-selected" />
+      )}
     </Box>
   );
 }

@@ -1,9 +1,12 @@
 import Box from "@mui/material/Box";
 import Typography from "@mui/material/Typography";
+import Button from "@mui/material/Button";
 import ChatBubbleOutlineIcon from "@mui/icons-material/ChatBubbleOutline";
 import InboxIcon from "@mui/icons-material/Inbox";
 import SearchOffIcon from "@mui/icons-material/SearchOff";
 import ForumOutlinedIcon from "@mui/icons-material/ForumOutlined";
+import PersonAddAlt1Icon from "@mui/icons-material/PersonAddAlt1";
+import { useUIStore } from "../../store/useUIStore";
 
 type EmptyStateVariant =
   | "no-chats"
@@ -18,7 +21,7 @@ const variants: Record<
   "no-chats": {
     icon: <InboxIcon sx={{ fontSize: 64, opacity: 0.4 }} />,
     title: "No chats yet",
-    subtitle: "Add a contact to start messaging",
+    subtitle: "Add a contact to start chatting",
   },
   "no-chat-selected": {
     icon: <ForumOutlinedIcon sx={{ fontSize: 64, opacity: 0.4 }} />,
@@ -43,6 +46,9 @@ interface EmptyStateProps {
 
 export function EmptyState({ variant }: EmptyStateProps) {
   const { icon, title, subtitle } = variants[variant];
+  const setAddContactDialogOpen = useUIStore(
+    (s) => s.setAddContactDialogOpen,
+  );
 
   return (
     <Box
@@ -65,6 +71,16 @@ export function EmptyState({ variant }: EmptyStateProps) {
       <Typography variant="body1" color="text.secondary">
         {subtitle}
       </Typography>
+      {variant === "no-chats" && (
+        <Button
+          variant="contained"
+          startIcon={<PersonAddAlt1Icon />}
+          onClick={() => setAddContactDialogOpen(true)}
+          sx={{ mt: 2 }}
+        >
+          Add Contact
+        </Button>
+      )}
     </Box>
   );
 }
