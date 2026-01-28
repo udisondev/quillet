@@ -12,6 +12,8 @@ import (
 )
 
 // App is the main application struct that manages the Wails lifecycle.
+// ctx is stored as a field because Wails passes it via lifecycle callbacks
+// and requires it for runtime.EventsEmit calls.
 type App struct {
 	ctx       context.Context
 	messenger messenger.Messenger
@@ -44,9 +46,10 @@ func (a *App) Startup(ctx context.Context) {
 		})
 	})
 
-	a.messenger.OnMessageStatusChanged(func(messageID string, status domain.MessageStatus) {
+	a.messenger.OnMessageStatusChanged(func(messageID, chatID string, status domain.MessageStatus) {
 		runtime.EventsEmit(a.ctx, EventMessageStatus, map[string]any{
 			"messageID": messageID,
+			"chatID":    chatID,
 			"status":    status,
 		})
 	})

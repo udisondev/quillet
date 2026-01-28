@@ -29,7 +29,7 @@ type StubMessenger struct {
 
 	onNewMessage           func(domain.Message)
 	onContactStatusChanged func(string, bool, int64)
-	onMessageStatusChanged func(string, domain.MessageStatus)
+	onMessageStatusChanged func(string, string, domain.MessageStatus)
 }
 
 // NewStubMessenger creates a StubMessenger pre-populated with test data.
@@ -87,16 +87,16 @@ func (s *StubMessenger) AddContact(_ context.Context, publicID, displayName stri
 	defer s.mu.Unlock()
 
 	if _, exists := s.contacts[publicID]; exists {
-		return nil, fmt.Errorf("contact %s already exists", publicID)
+		return nil, fmt.Errorf("add contact: %w", fmt.Errorf("contact %s already exists", publicID))
 	}
 
 	c := &domain.Contact{
-		PublicID:    publicID,
-		PublicKey:   publicID + "-pub-key",
-		DisplayName: displayName,
-		IsOnline:    false,
-		LastSeen:    time.Now().UnixMilli(),
-		AddedAt:     time.Now().UnixMilli(),
+		PublicID:     publicID,
+		PublicKey:    publicID + "-pub-key",
+		DisplayName:  displayName,
+		IsOnline:     false,
+		LastSeen:     time.Now().UnixMilli(),
+		AddedAt:      time.Now().UnixMilli(),
 	}
 	s.contacts[publicID] = c
 
@@ -110,7 +110,7 @@ func (s *StubMessenger) RemoveContact(_ context.Context, contactID string) error
 	defer s.mu.Unlock()
 
 	if _, exists := s.contacts[contactID]; !exists {
-		return fmt.Errorf("contact %s not found", contactID)
+		return fmt.Errorf("remove contact: contact %s not found", contactID)
 	}
 	delete(s.contacts, contactID)
 	delete(s.messages, contactID)
@@ -125,7 +125,7 @@ func (s *StubMessenger) BlockContact(_ context.Context, contactID string) error 
 
 	c, exists := s.contacts[contactID]
 	if !exists {
-		return fmt.Errorf("contact %s not found", contactID)
+		return fmt.Errorf("block contact: contact %s not found", contactID)
 	}
 	c.IsBlocked = true
 	return nil
@@ -138,7 +138,7 @@ func (s *StubMessenger) UnblockContact(_ context.Context, contactID string) erro
 
 	c, exists := s.contacts[contactID]
 	if !exists {
-		return fmt.Errorf("contact %s not found", contactID)
+		return fmt.Errorf("unblock contact: contact %s not found", contactID)
 	}
 	c.IsBlocked = false
 	return nil
@@ -179,13 +179,26 @@ func (s *StubMessenger) GetChatSummaries(_ context.Context) ([]domain.ChatSummar
 	return summaries, nil
 }
 
-func (s *StubMessenger) SendMessage(_ context.Context, contactID, content string) (*domain.Message, error) {
+func (s *StubMessenger) SendMessage(ctx context.Context, contactID, content string) (*domain.Message, error) {
 	simulateDelay(20, 60)
+
+	msg, err := s.recordOutgoingMessage(contactID, content)
+	if err != nil {
+		return nil, err
+	}
+
+	go s.simulateMessageDelivery(ctx, msg.ID, contactID)
+
+	return msg, nil
+}
+
+// recordOutgoingMessage creates and stores a new outgoing message under the lock.
+func (s *StubMessenger) recordOutgoingMessage(contactID, content string) (*domain.Message, error) {
 	s.mu.Lock()
+	defer s.mu.Unlock()
 
 	if _, exists := s.contacts[contactID]; !exists {
-		s.mu.Unlock()
-		return nil, fmt.Errorf("contact %s not found", contactID)
+		return nil, fmt.Errorf("send message: contact %s not found", contactID)
 	}
 
 	msg := domain.Message{
@@ -197,26 +210,40 @@ func (s *StubMessenger) SendMessage(_ context.Context, contactID, content string
 		Status:    domain.StatusSending,
 	}
 	s.messages[contactID] = append(s.messages[contactID], msg)
-	s.mu.Unlock()
-
-	// Simulate delivery lifecycle in background.
-	go s.simulateMessageDelivery(msg.ID, contactID)
 
 	return &msg, nil
 }
 
-func (s *StubMessenger) simulateMessageDelivery(msgID, contactID string) {
+func (s *StubMessenger) simulateMessageDelivery(ctx context.Context, msgID, contactID string) {
 	// sending → sent
-	simulateDelay(150, 300)
+	if !sleepWithContext(ctx, 150, 300) {
+		return
+	}
 	s.updateMessageStatus(msgID, contactID, domain.StatusSent)
 
 	// sent → delivered
-	simulateDelay(400, 700)
+	if !sleepWithContext(ctx, 400, 700) {
+		return
+	}
 	s.updateMessageStatus(msgID, contactID, domain.StatusDelivered)
 
 	// auto-reply after 1-3s
-	simulateDelay(1000, 3000)
+	if !sleepWithContext(ctx, 1000, 3000) {
+		return
+	}
 	s.sendAutoReply(contactID)
+}
+
+// sleepWithContext waits for a random duration between minMs and maxMs, returning
+// false if the context was cancelled before the delay elapsed.
+func sleepWithContext(ctx context.Context, minMs, maxMs int) bool {
+	d := time.Duration(minMs+rand.IntN(maxMs-minMs+1)) * time.Millisecond
+	select {
+	case <-ctx.Done():
+		return false
+	case <-time.After(d):
+		return true
+	}
 }
 
 func (s *StubMessenger) updateMessageStatus(msgID, contactID string, status domain.MessageStatus) {
@@ -232,7 +259,7 @@ func (s *StubMessenger) updateMessageStatus(msgID, contactID string, status doma
 	s.mu.Unlock()
 
 	if cb != nil {
-		cb(msgID, status)
+		cb(msgID, contactID, status)
 	}
 }
 
@@ -336,7 +363,7 @@ func (s *StubMessenger) OnContactStatusChanged(fn func(contactID string, isOnlin
 	s.onContactStatusChanged = fn
 }
 
-func (s *StubMessenger) OnMessageStatusChanged(fn func(messageID string, status domain.MessageStatus)) {
+func (s *StubMessenger) OnMessageStatusChanged(fn func(messageID, chatID string, status domain.MessageStatus)) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.onMessageStatusChanged = fn
