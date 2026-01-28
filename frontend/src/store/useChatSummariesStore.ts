@@ -8,6 +8,11 @@ interface ChatSummariesState {
   removeSummary: (contactID: string) => void;
   updateSummary: (contactID: string, partial: Partial<ChatSummary>) => void;
   updateUnreadCount: (contactID: string, count: number) => void;
+  updateContactInSummaries: (
+    contactID: string,
+    isOnline: boolean,
+    lastSeen?: number,
+  ) => void;
 }
 
 export const useChatSummariesStore = create<ChatSummariesState>()((set) => ({
@@ -29,6 +34,21 @@ export const useChatSummariesStore = create<ChatSummariesState>()((set) => ({
     set((state) => ({
       summaries: state.summaries.map((s) =>
         s.contactID === contactID ? { ...s, unreadCount: count } : s,
+      ),
+    })),
+  updateContactInSummaries: (contactID, isOnline, lastSeen) =>
+    set((state) => ({
+      summaries: state.summaries.map((s) =>
+        s.contactID === contactID
+          ? {
+              ...s,
+              contact: {
+                ...s.contact,
+                isOnline,
+                ...(lastSeen != null && { lastSeen }),
+              },
+            }
+          : s,
       ),
     })),
 }));

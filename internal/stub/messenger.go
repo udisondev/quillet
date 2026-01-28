@@ -44,6 +44,21 @@ const (
 	// Status simulation interval range (seconds).
 	statusSimMinSec = 10
 	statusSimMaxSec = 30
+
+	// Connection simulation delays (milliseconds).
+	connStartupDelayMin = 500
+	connStartupDelayMax = 1500
+	connCycleMinSec     = 45
+	connCycleMaxSec     = 90
+	connReconnectMin    = 1000
+	connReconnectMax    = 2500
+)
+
+// Connection state constants matching frontend ConnectionState type.
+const (
+	connStateConnecting   = "connecting"
+	connStateConnected    = "connected"
+	connStateDisconnected = "disconnected"
 )
 
 // StubMessenger implements messenger.Messenger with in-memory test data.
@@ -59,6 +74,9 @@ type StubMessenger struct {
 	onNewMessage           func(domain.Message)
 	onContactStatusChanged messenger.ContactStatusHandler
 	onMessageStatusChanged messenger.MessageStatusHandler
+	onTypingChanged        messenger.TypingHandler
+	onConnectionChanged    messenger.ConnectionHandler
+	connState              string
 }
 
 // NewStubMessenger creates a StubMessenger pre-populated with test data.
@@ -282,10 +300,15 @@ func (s *StubMessenger) simulateMessageDelivery(ctx context.Context, msgID, cont
 	}
 	s.updateMessageStatus(msgID, contactID, domain.StatusDelivered)
 
-	// auto-reply after delay
+	// typing indicator before auto-reply
+	s.emitTyping(contactID, true)
+
 	if !simulateDelay(ctx, deliveryAutoReplyMin, deliveryAutoReplyMax) {
+		s.emitTyping(contactID, false)
 		return
 	}
+
+	s.emitTyping(contactID, false)
 	s.sendAutoReply(contactID)
 }
 
@@ -303,6 +326,16 @@ func (s *StubMessenger) updateMessageStatus(msgID, contactID string, status doma
 
 	if cb != nil {
 		cb(msgID, contactID, status)
+	}
+}
+
+func (s *StubMessenger) emitTyping(contactID string, isTyping bool) {
+	s.mu.RLock()
+	cb := s.onTypingChanged
+	s.mu.RUnlock()
+
+	if cb != nil {
+		cb(contactID, isTyping)
 	}
 }
 
@@ -454,6 +487,18 @@ func (s *StubMessenger) OnMessageStatusChanged(fn messenger.MessageStatusHandler
 	s.onMessageStatusChanged = fn
 }
 
+func (s *StubMessenger) OnTypingChanged(fn messenger.TypingHandler) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.onTypingChanged = fn
+}
+
+func (s *StubMessenger) OnConnectionStateChanged(fn messenger.ConnectionHandler) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.onConnectionChanged = fn
+}
+
 // --- Simulation ---
 
 // StartStatusSimulation periodically toggles random contacts online/offline.
@@ -502,6 +547,67 @@ func (s *StubMessenger) StartStatusSimulation(ctx context.Context) {
 			}
 		}
 	}()
+}
+
+// StartConnectionSimulation simulates initial connection and periodic disconnects.
+// The initial connecting→connected transition uses a startup delay.
+// Late-joining frontends get the current state via ConnectionState().
+func (s *StubMessenger) StartConnectionSimulation(ctx context.Context) {
+	s.wg.Add(1)
+	go func() {
+		defer s.wg.Done()
+
+		// Startup: connecting → connected
+		s.emitConnection(connStateConnecting)
+		if !simulateDelay(ctx, connStartupDelayMin, connStartupDelayMax) {
+			return
+		}
+		s.emitConnection(connStateConnected)
+
+		// Periodic disconnects
+		for {
+			delay := connCycleMinSec + rand.IntN(connCycleMaxSec-connCycleMinSec+1)
+			timer := time.NewTimer(time.Duration(delay) * time.Second)
+			select {
+			case <-ctx.Done():
+				timer.Stop()
+				return
+			case <-timer.C:
+			}
+
+			s.emitConnection(connStateDisconnected)
+
+			if !simulateDelay(ctx, connReconnectMin, connReconnectMax) {
+				return
+			}
+
+			s.emitConnection(connStateConnecting)
+
+			if !simulateDelay(ctx, connReconnectMin, connReconnectMax) {
+				return
+			}
+
+			s.emitConnection(connStateConnected)
+		}
+	}()
+}
+
+func (s *StubMessenger) emitConnection(state string) {
+	s.mu.Lock()
+	s.connState = state
+	cb := s.onConnectionChanged
+	s.mu.Unlock()
+
+	if cb != nil {
+		cb(state)
+	}
+}
+
+// ConnectionState returns the current simulated connection state.
+func (s *StubMessenger) ConnectionState() string {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.connState
 }
 
 // Wait blocks until all background goroutines have stopped.

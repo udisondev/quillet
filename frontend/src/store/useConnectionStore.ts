@@ -7,6 +7,6 @@ interface ConnectionStoreState {
 }
 
 export const useConnectionStore = create<ConnectionStoreState>()((set) => ({
-  state: "disconnected",
+  state: "connecting",
   setState: (state) => set({ state }),
 }));

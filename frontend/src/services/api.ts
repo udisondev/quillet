@@ -13,6 +13,7 @@ import {
   ClearHistory,
   GetSettings,
   UpdateSettings,
+  NotifyReady,
 } from "@wailsjs/go/main/App";
 import { domain } from "@wailsjs/go/models";
 import type { Identity } from "../types/identity";
@@ -93,4 +94,10 @@ export function getSettings(): Promise<Settings> {
 
 export function updateSettings(settings: Settings): Promise<void> {
   return UpdateSettings(new domain.Settings(settings));
+}
+
+// Lifecycle
+
+export function notifyReady(): Promise<void> {
+  return NotifyReady();
 }

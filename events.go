@@ -8,11 +8,12 @@ const (
 	EventMessageStatus   = "message:status"
 	EventContactStatus   = "contact:status"
 
-	// The following events are reserved for frontend use and
+	EventContactTyping   = "contact:typing"
+	EventConnectionState = "connection:state"
+
+	// The following events are reserved for future use and
 	// are not currently emitted from the Go backend.
 	EventAppError        = "app:error"
-	EventContactTyping   = "contact:typing"
 	EventContactUpdated  = "contact:updated"
-	EventConnectionState = "connection:state"
 	EventSettingsChanged = "settings:changed"
 )

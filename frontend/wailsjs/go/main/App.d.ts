@@ -22,6 +22,8 @@ export function GetSettings():Promise<domain.Settings>;
 
 export function MarkAsRead(arg1:string):Promise<void>;
 
+export function NotifyReady():Promise<void>;
+
 export function SendMessage(arg1:string,arg2:string):Promise<domain.Message>;
 
 export function UnblockContact(arg1:string):Promise<void>;

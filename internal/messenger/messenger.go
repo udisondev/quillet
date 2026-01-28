@@ -42,6 +42,12 @@ type ContactStatusHandler func(contactID string, isOnline bool, lastSeen int64)
 // MessageStatusHandler is called when a message delivery status changes.
 type MessageStatusHandler func(messageID, chatID string, status domain.MessageStatus)
 
+// TypingHandler is called when a contact starts or stops typing.
+type TypingHandler func(contactID string, isTyping bool)
+
+// ConnectionHandler is called when the connection state changes.
+type ConnectionHandler func(state string)
+
 // EventSubscriber allows registering callbacks for real-time events.
 // Each On* method replaces the previously registered callback.
 // Only one handler per event type is supported.
@@ -49,6 +55,8 @@ type EventSubscriber interface {
 	OnNewMessage(fn func(msg domain.Message))
 	OnContactStatusChanged(fn ContactStatusHandler)
 	OnMessageStatusChanged(fn MessageStatusHandler)
+	OnTypingChanged(fn TypingHandler)
+	OnConnectionStateChanged(fn ConnectionHandler)
 }
 
 // StatusSimulator runs background simulation of contact status changes.
@@ -82,4 +90,15 @@ type MessageStatusEvent struct {
 	MessageID string               `json:"messageID"`
 	ChatID    string               `json:"chatID"`
 	Status    domain.MessageStatus `json:"status"`
+}
+
+// TypingEvent is the payload emitted when a contact starts or stops typing.
+type TypingEvent struct {
+	ContactID string `json:"contactID"`
+	IsTyping  bool   `json:"isTyping"`
+}
+
+// ConnectionEvent is the payload emitted when connection state changes.
+type ConnectionEvent struct {
+	State string `json:"state"`
 }

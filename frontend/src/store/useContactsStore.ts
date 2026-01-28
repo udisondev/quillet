@@ -6,7 +6,11 @@ interface ContactsState {
   setContacts: (contacts: Contact[]) => void;
   addContact: (contact: Contact) => void;
   removeContact: (publicID: string) => void;
-  updateContactStatus: (publicID: string, isOnline: boolean) => void;
+  updateContactStatus: (
+    publicID: string,
+    isOnline: boolean,
+    lastSeen?: number,
+  ) => void;
 }
 
 export const useContactsStore = create<ContactsState>()((set) => ({
@@ -18,10 +22,12 @@ export const useContactsStore = create<ContactsState>()((set) => ({
     set((state) => ({
       contacts: state.contacts.filter((c) => c.publicID !== publicID),
     })),
-  updateContactStatus: (publicID, isOnline) =>
+  updateContactStatus: (publicID, isOnline, lastSeen) =>
     set((state) => ({
       contacts: state.contacts.map((c) =>
-        c.publicID === publicID ? { ...c, isOnline } : c,
+        c.publicID === publicID
+          ? { ...c, isOnline, ...(lastSeen != null && { lastSeen }) }
+          : c,
       ),
     })),
 }));

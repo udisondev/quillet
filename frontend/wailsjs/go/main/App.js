@@ -42,6 +42,10 @@ export function MarkAsRead(arg1) {
   return window['go']['main']['App']['MarkAsRead'](arg1);
 }
 
+export function NotifyReady() {
+  return window['go']['main']['App']['NotifyReady']();
+}
+
 export function SendMessage(arg1, arg2) {
   return window['go']['main']['App']['SendMessage'](arg1, arg2);
 }

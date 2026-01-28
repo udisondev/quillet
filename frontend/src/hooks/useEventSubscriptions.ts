@@ -17,6 +17,8 @@ import { useChatSummariesStore } from "../store/useChatSummariesStore";
 import { useContactsStore } from "../store/useContactsStore";
 import { useConnectionStore } from "../store/useConnectionStore";
 import { useSettingsStore } from "../store/useSettingsStore";
+import { useUIStore } from "../store/useUIStore";
+import { markAsRead, notifyReady } from "../services/api";
 import type { Message, Settings, ConnectionState } from "../types";
 
 export function useEventSubscriptions() {
@@ -25,6 +27,9 @@ export function useEventSubscriptions() {
   const setTyping = useMessagesStore((s) => s.setTyping);
   const updateSummary = useChatSummariesStore((s) => s.updateSummary);
   const updateUnreadCount = useChatSummariesStore((s) => s.updateUnreadCount);
+  const updateContactInSummaries = useChatSummariesStore(
+    (s) => s.updateContactInSummaries,
+  );
   const updateContactStatus = useContactsStore((s) => s.updateContactStatus);
   const setConnectionState = useConnectionStore((s) => s.setState);
   const setSettings = useSettingsStore((s) => s.setSettings);
@@ -34,6 +39,16 @@ export function useEventSubscriptions() {
       onMessageReceived((message: Message) => {
         addMessage(message.chatID, message);
         updateSummary(message.chatID, { lastMessage: message });
+
+        // Gap 5: auto mark-as-read when the chat is currently active
+        const activeChatID = useUIStore.getState().activeChatID;
+        if (activeChatID === message.chatID) {
+          markAsRead(message.chatID).catch((err) =>
+            console.error("auto markAsRead:", err),
+          );
+          return;
+        }
+
         updateUnreadCount(
           message.chatID,
           (useChatSummariesStore.getState().summaries.find(
@@ -47,7 +62,18 @@ export function useEventSubscriptions() {
       }),
 
       onContactStatus((payload: ContactStatusPayload) => {
-        updateContactStatus(payload.contactID, payload.isOnline);
+        // Gap 3: pass lastSeen to contacts store
+        updateContactStatus(
+          payload.contactID,
+          payload.isOnline,
+          payload.lastSeen,
+        );
+        // Gap 4: sync status into chat summaries
+        updateContactInSummaries(
+          payload.contactID,
+          payload.isOnline,
+          payload.lastSeen,
+        );
       }),
 
       onContactTyping((payload: ContactTypingPayload) => {
@@ -63,6 +89,11 @@ export function useEventSubscriptions() {
       }),
     ];
 
+    // Signal backend that event listeners are ready
+    notifyReady().catch((err) =>
+      console.error("notifyReady:", err),
+    );
+
     return () => {
       for (const cleanup of cleanups) {
         cleanup();
@@ -74,6 +105,7 @@ export function useEventSubscriptions() {
     setTyping,
     updateSummary,
     updateUnreadCount,
+    updateContactInSummaries,
     updateContactStatus,
     setConnectionState,
     setSettings,

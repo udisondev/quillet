@@ -4,7 +4,10 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/wailsapp/wails/v2/pkg/runtime"
+
 	"quillet/internal/domain"
+	"quillet/internal/stub"
 )
 
 // validThemes contains the set of allowed theme values.
@@ -12,6 +15,16 @@ var validThemes = map[string]struct{}{
 	"light":  {},
 	"dark":   {},
 	"system": {},
+}
+
+// NotifyReady is called by the frontend when React event listeners are registered.
+// It emits the current connection state so the frontend is in sync.
+func (a *App) NotifyReady() {
+	if sm, ok := a.messenger.(*stub.StubMessenger); ok {
+		if state := sm.ConnectionState(); state != "" {
+			runtime.EventsEmit(a.ctx, EventConnectionState, state)
+		}
+	}
 }
 
 // --- Identity ---

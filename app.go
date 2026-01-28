@@ -54,7 +54,23 @@ func (a *App) Startup(ctx context.Context) {
 		})
 	})
 
+	a.messenger.OnTypingChanged(func(contactID string, isTyping bool) {
+		runtime.EventsEmit(a.ctx, EventContactTyping, messenger.TypingEvent{
+			ContactID: contactID,
+			IsTyping:  isTyping,
+		})
+	})
+
+	a.messenger.OnConnectionStateChanged(func(state string) {
+		runtime.EventsEmit(a.ctx, EventConnectionState, state)
+	})
+
 	a.messenger.StartStatusSimulation(simCtx)
+
+	// Start connection simulation with a fixed delay to allow frontend to mount.
+	if sm, ok := a.messenger.(*stub.StubMessenger); ok {
+		sm.StartConnectionSimulation(simCtx)
+	}
 
 	slog.Info("application started")
 }
