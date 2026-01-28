@@ -13,19 +13,34 @@ import (
 //go:embed all:frontend/dist
 var assets embed.FS
 
+// Window size constants.
+const (
+	windowWidth    = 1024
+	windowHeight   = 768
+	windowMinWidth  = 800
+	windowMinHeight = 560
+)
+
 func main() {
+	if err := run(); err != nil {
+		slog.Error("fatal", "error", err)
+		os.Exit(1)
+	}
+}
+
+func run() error {
 	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{
 		Level: slog.LevelInfo,
 	})))
 
 	app := NewApp()
 
-	if err := wails.Run(&options.App{
-		Title:    "Quillet",
-		Width:    1024,
-		Height:   768,
-		MinWidth: 800,
-		MinHeight: 560,
+	return wails.Run(&options.App{
+		Title:     "Quillet",
+		Width:     windowWidth,
+		Height:    windowHeight,
+		MinWidth:  windowMinWidth,
+		MinHeight: windowMinHeight,
 		AssetServer: &assetserver.Options{
 			Assets: assets,
 		},
@@ -37,8 +52,5 @@ func main() {
 		Bind: []any{
 			app,
 		},
-	}); err != nil {
-		slog.Error("wails run", "error", err)
-		os.Exit(1)
-	}
+	})
 }

@@ -159,13 +159,15 @@ func defaultUnreadCounts() map[string]int {
 	}
 }
 
+const defaultSidebarWidth = 320
+
 func defaultSettings() *domain.Settings {
 	return &domain.Settings{
 		Theme:              "system",
 		NotificationsOn:    true,
 		SoundOn:            true,
 		ShowMessagePreview: true,
-		SidebarWidth:       320,
+		SidebarWidth:       defaultSidebarWidth,
 	}
 }
 

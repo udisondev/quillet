@@ -16,45 +16,45 @@ import (
 // and requires it for runtime.EventsEmit calls.
 type App struct {
 	ctx       context.Context
+	cancel    context.CancelFunc
 	messenger messenger.Messenger
-	stub      *stub.StubMessenger
 }
 
 // NewApp creates a new App instance with a StubMessenger backend.
 func NewApp() *App {
-	s := stub.NewStubMessenger()
 	return &App{
-		messenger: s,
-		stub:      s,
+		messenger: stub.NewStubMessenger(),
 	}
 }
 
 // Startup is called when the Wails app starts.
 // The context is saved for calling Wails runtime methods.
 func (a *App) Startup(ctx context.Context) {
+	simCtx, cancel := context.WithCancel(ctx)
 	a.ctx = ctx
+	a.cancel = cancel
 
 	a.messenger.OnNewMessage(func(msg domain.Message) {
 		runtime.EventsEmit(a.ctx, EventMessageReceived, msg)
 	})
 
 	a.messenger.OnContactStatusChanged(func(contactID string, isOnline bool, lastSeen int64) {
-		runtime.EventsEmit(a.ctx, EventContactStatus, map[string]any{
-			"contactID": contactID,
-			"isOnline":  isOnline,
-			"lastSeen":  lastSeen,
+		runtime.EventsEmit(a.ctx, EventContactStatus, messenger.ContactStatusEvent{
+			ContactID: contactID,
+			IsOnline:  isOnline,
+			LastSeen:  lastSeen,
 		})
 	})
 
 	a.messenger.OnMessageStatusChanged(func(messageID, chatID string, status domain.MessageStatus) {
-		runtime.EventsEmit(a.ctx, EventMessageStatus, map[string]any{
-			"messageID": messageID,
-			"chatID":    chatID,
-			"status":    status,
+		runtime.EventsEmit(a.ctx, EventMessageStatus, messenger.MessageStatusEvent{
+			MessageID: messageID,
+			ChatID:    chatID,
+			Status:    status,
 		})
 	})
 
-	a.stub.StartStatusSimulation(ctx)
+	a.messenger.StartStatusSimulation(simCtx)
 
 	slog.Info("application started")
 }
@@ -74,4 +74,7 @@ func (a *App) BeforeClose(_ context.Context) bool {
 // Shutdown is called when the application is shutting down.
 func (a *App) Shutdown(_ context.Context) {
 	slog.Info("application shutting down")
+	a.cancel()
+	a.messenger.Wait()
+	slog.Info("all background goroutines stopped")
 }

@@ -1,8 +1,18 @@
 package main
 
 import (
+	"fmt"
+	"strings"
+
 	"quillet/internal/domain"
 )
+
+// validThemes contains the set of allowed theme values.
+var validThemes = map[string]struct{}{
+	"light":  {},
+	"dark":   {},
+	"system": {},
+}
 
 // --- Identity ---
 
@@ -13,6 +23,10 @@ func (a *App) GetIdentity() (*domain.User, error) {
 
 // UpdateProfile changes the current user's display name.
 func (a *App) UpdateProfile(displayName string) error {
+	displayName = strings.TrimSpace(displayName)
+	if displayName == "" {
+		return fmt.Errorf("update profile: %w", domain.ErrEmptyDisplayName)
+	}
 	return a.messenger.UpdateProfile(a.ctx, displayName)
 }
 
@@ -25,6 +39,14 @@ func (a *App) GetContacts() ([]domain.Contact, error) {
 
 // AddContact adds a new contact by public ID.
 func (a *App) AddContact(publicID, displayName string) (*domain.Contact, error) {
+	publicID = strings.TrimSpace(publicID)
+	if publicID == "" {
+		return nil, fmt.Errorf("add contact: %w", domain.ErrEmptyPublicID)
+	}
+	displayName = strings.TrimSpace(displayName)
+	if displayName == "" {
+		return nil, fmt.Errorf("add contact: %w", domain.ErrEmptyDisplayName)
+	}
 	return a.messenger.AddContact(a.ctx, publicID, displayName)
 }
 
@@ -52,11 +74,18 @@ func (a *App) GetChatSummaries() ([]domain.ChatSummary, error) {
 
 // SendMessage sends a text message to a contact.
 func (a *App) SendMessage(contactID, content string) (*domain.Message, error) {
+	content = strings.TrimSpace(content)
+	if content == "" {
+		return nil, fmt.Errorf("send message: %w", domain.ErrEmptyContent)
+	}
 	return a.messenger.SendMessage(a.ctx, contactID, content)
 }
 
 // GetMessages returns paginated messages for a contact.
 func (a *App) GetMessages(contactID string, limit int, beforeID string) ([]domain.Message, error) {
+	if limit < 0 {
+		return nil, fmt.Errorf("get messages: %w", domain.ErrInvalidLimit)
+	}
 	return a.messenger.GetMessages(a.ctx, contactID, limit, beforeID)
 }
 
@@ -79,5 +108,11 @@ func (a *App) GetSettings() (*domain.Settings, error) {
 
 // UpdateSettings saves new application settings.
 func (a *App) UpdateSettings(settings domain.Settings) error {
+	if _, ok := validThemes[settings.Theme]; !ok {
+		return fmt.Errorf("update settings: %w", domain.ErrInvalidTheme)
+	}
+	if settings.SidebarWidth <= 0 {
+		return fmt.Errorf("update settings: %w", domain.ErrInvalidSidebar)
+	}
 	return a.messenger.UpdateSettings(a.ctx, settings)
 }

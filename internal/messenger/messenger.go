@@ -36,11 +36,27 @@ type SettingsManager interface {
 	UpdateSettings(ctx context.Context, settings domain.Settings) error
 }
 
+// ContactStatusHandler is called when a contact's online status changes.
+type ContactStatusHandler func(contactID string, isOnline bool, lastSeen int64)
+
+// MessageStatusHandler is called when a message delivery status changes.
+type MessageStatusHandler func(messageID, chatID string, status domain.MessageStatus)
+
 // EventSubscriber allows registering callbacks for real-time events.
+// Each On* method replaces the previously registered callback.
+// Only one handler per event type is supported.
 type EventSubscriber interface {
 	OnNewMessage(fn func(msg domain.Message))
-	OnContactStatusChanged(fn func(contactID string, isOnline bool, lastSeen int64))
-	OnMessageStatusChanged(fn func(messageID, chatID string, status domain.MessageStatus))
+	OnContactStatusChanged(fn ContactStatusHandler)
+	OnMessageStatusChanged(fn MessageStatusHandler)
+}
+
+// StatusSimulator runs background simulation of contact status changes.
+// Implementations must stop all background goroutines when ctx is cancelled
+// and block on Wait until they are fully stopped.
+type StatusSimulator interface {
+	StartStatusSimulation(ctx context.Context)
+	Wait()
 }
 
 // Messenger composes all messaging sub-interfaces into a single contract.
@@ -51,4 +67,19 @@ type Messenger interface {
 	ChatService
 	SettingsManager
 	EventSubscriber
+	StatusSimulator
+}
+
+// ContactStatusEvent is the payload emitted for contact status changes.
+type ContactStatusEvent struct {
+	ContactID string `json:"contactID"`
+	IsOnline  bool   `json:"isOnline"`
+	LastSeen  int64  `json:"lastSeen"`
+}
+
+// MessageStatusEvent is the payload emitted for message delivery status changes.
+type MessageStatusEvent struct {
+	MessageID string               `json:"messageID"`
+	ChatID    string               `json:"chatID"`
+	Status    domain.MessageStatus `json:"status"`
 }

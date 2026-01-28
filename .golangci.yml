@@ -1,0 +1,30 @@
+linters:
+  enable:
+    - errcheck
+    - govet
+    - staticcheck
+    - revive
+    - goimports
+    - ineffassign
+    - unused
+    - gosimple
+
+linters-settings:
+  goimports:
+    local-prefixes: quillet
+  revive:
+    rules:
+      - name: blank-imports
+      - name: context-as-argument
+      - name: dot-imports
+      - name: error-return
+      - name: error-strings
+      - name: exported
+      - name: increment-decrement
+      - name: var-declaration
+      - name: package-comments
+        disabled: true
+
+issues:
+  exclude-dirs:
+    - frontend
